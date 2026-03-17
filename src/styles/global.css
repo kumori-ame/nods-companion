@@ -1,7 +1,7 @@
 @font-face {
   font-family: 'clock-font';
-  src: url('/src/fonts/clock-font.woff') format('woff'),
-    url('/src/fonts/clock-font.woff2') format('woff2');
+  src: url('../fonts/clock-font.woff') format('woff'),
+       url('../fonts/clock-font.woff2') format('woff2');
 }
 
 .clockFont {
