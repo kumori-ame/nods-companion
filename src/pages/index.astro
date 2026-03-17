@@ -1,11 +1,92 @@
 ---
-import Welcome from '../components/Welcome.astro';
-import Layout from '../layouts/Layout.astro';
+function moonAge(date) {
+  // UNIXエポック起点の算出対象日時までの通算日数 - 月齢に合わせるための補正値
+  const day = date.getTime() / 864e5 - 6.71;
 
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+  // 算出対象日時に対する平均朔望月の遅れ補正値
+  const n = 2.162e-9 * ((date.getTime() - 9466848e5) / 315576e5);
+
+  // 平均朔望月
+  const r = 29.530588853 + n;
+
+  // 月齢
+  const age = day > 0 ? day % r : (r + (day % r)) % r;
+
+  return age.toFixed(1);
+}
+
+const currentDate = new Date();
+const currentMoonAge = moonAge(currentDate);
+
+let weatherData = null;
+try {
+  //札幌=016010
+  const res = await fetch(
+    "https://weather.tsukumijima.net/api/forecast/city/016010",
+  );
+  if (res.ok) {
+    weatherData = await res.json();
+  }
+} catch (e) {
+  console.error("Failed to fetch weather data", e);
+}
+const todayWeather = weatherData?.forecasts?.[0];
 ---
 
-<Layout>
-	<Welcome />
-</Layout>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Moon Phase</title>
+    <link rel="stylesheet" href="/src/styles/global.css" />
+  </head>
+  <body>
+    <div class="card">
+      <h1>NODs COMPANION</h1>
+      <p class="moon-age">現在の月齢: <strong>{currentMoonAge}</strong></p>
+      <canvas id="moonCanvas" width="200" height="200" data-age={currentMoonAge}
+      ></canvas>
+
+      {
+        todayWeather && (
+          <div class="weather-info">
+            <p class="weather-title">現在の気象条件:札幌</p>
+            <div class="weather-detail">
+              <span>{todayWeather.telop}</span>
+              <img
+                class="weather-svg"
+                src={todayWeather.image.url}
+                alt={todayWeather.image.title}
+              />
+            </div>
+          </div>
+        )
+      }
+
+      <p class="clockFont" id="clock">00:00:00</p>
+    </div>
+
+    <script>
+      import { drawMoon } from "../scripts/moonPhase.js";
+
+      const canvas = document.getElementById("moonCanvas");
+      if (canvas && canvas.dataset.age) {
+        drawMoon(canvas.dataset.age);
+      }
+
+      function updateClock() {
+        const now = new Date();
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        const seconds = String(now.getSeconds()).padStart(2, "0");
+        document.getElementById("clock").textContent =
+          `${hours}:${minutes}:${seconds}`;
+      }
+
+      setInterval(updateClock, 1000);
+      updateClock();
+    </script>
+  </body>
+</html>
